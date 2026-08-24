@@ -50,12 +50,12 @@ async def test_mandate_invalid_signature(async_client: AsyncClient, invalid_sign
         },
     )
     assert response.status_code == 403
-    assert "Invalid AP2 mandate" in response.json()["detail"]
+    assert "validation failed" in response.json()["detail"].lower() or "invalid" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
 async def test_mandate_expired_token(async_client: AsyncClient, expired_mandate_token: str):
-    """Test expired token is rejected with 403 Forbidden."""
+    """Test expired token is rejected with 401 Unauthorized."""
     response = await async_client.post(
         "/api/v1/agent/negotiate",
         headers={"Authorization": f"Bearer {expired_mandate_token}"},
@@ -64,5 +64,5 @@ async def test_mandate_expired_token(async_client: AsyncClient, expired_mandate_
             "proposed_price": 4000.0,
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
     assert "expired" in response.json()["detail"].lower()

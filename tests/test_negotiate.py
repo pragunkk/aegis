@@ -102,3 +102,31 @@ async def test_negotiation_non_existent_product(async_client: AsyncClient, valid
         },
     )
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_anti_probing_sentinel_quarantines_agent(async_client: AsyncClient, valid_mandate_token: str):
+    """
+    Test scenario: Malicious agent makes 3 rapid sub-floor attacks.
+    Expected: The 3rd/subsequent attack triggers Anti-Probing Sentinel quarantine (HTTP 429).
+    """
+    product_id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+    
+    # 1st and 2nd attacks blocked with 422
+    for _ in range(2):
+        res = await async_client.post(
+            "/api/v1/agent/negotiate",
+            headers={"Authorization": f"Bearer {valid_mandate_token}"},
+            json={"product_id": product_id, "proposed_price": 2000.0},
+        )
+        assert res.status_code == 422
+
+    # 3rd attack triggers probe limit quarantine -> HTTP 429
+    res_quarantine = await async_client.post(
+        "/api/v1/agent/negotiate",
+        headers={"Authorization": f"Bearer {valid_mandate_token}"},
+        json={"product_id": product_id, "proposed_price": 2000.0},
+    )
+    assert res_quarantine.status_code == 429
+    assert "quarantined" in res_quarantine.json()["detail"].lower()
+

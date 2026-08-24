@@ -56,9 +56,11 @@ class NegotiationDecision(BaseModel):
     message: str
     product_id: str
     negotiated_price: Optional[float] = None
+    counter_offer: Optional[float] = None
     razorpay_order_id: Optional[str] = None
     amount_in_subunits: Optional[int] = None # e.g. paise
     currency: str = "INR"
+    checkout_url: Optional[str] = None
 
 
 class NegotiateResponse(BaseModel):

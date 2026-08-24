@@ -1,16 +1,35 @@
-"""Database connection and repository layer supporting both Supabase and in-memory mock."""
+"""Database connection and repository layer using Supabase Client."""
 
 import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import uuid
 
-from backend.app.config import settings
+from supabase import create_client, Client
+from backend.app.config import get_settings
 from backend.app.models.domain import Product, Order, AuditLog, OrderStatus
 
 logger = logging.getLogger("aegis.database")
+settings = get_settings()
 
-# Seed data for default initialization
+# Initialize live Supabase Client
+supabase: Optional[Client] = None
+
+if (
+    settings.SUPABASE_URL
+    and settings.SUPABASE_KEY
+    and "your-project" not in settings.SUPABASE_URL
+    and "your-supabase" not in settings.SUPABASE_KEY
+):
+    try:
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        logger.info(f"Initialized live Supabase client for: {settings.SUPABASE_URL}")
+    except Exception as e:
+        logger.warning(f"Failed to connect to Supabase: {e}. Using fallback repository.")
+else:
+    logger.info("Supabase credentials not configured or placeholder detected. Operating with pre-seeded fallback store.")
+
+# Default seed catalog
 DEFAULT_PRODUCTS = [
     Product(
         id="a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
@@ -48,48 +67,50 @@ DEFAULT_PRODUCTS = [
 
 
 class DatabaseRepository:
-    """Unified repository for data persistence."""
+    """Unified repository layer executing live Supabase database operations."""
 
     def __init__(self):
-        self.supabase_client = None
         self._mock_products: Dict[str, Product] = {p.id: p for p in DEFAULT_PRODUCTS}
         self._mock_orders: Dict[str, Order] = {}
         self._mock_audit_logs: List[AuditLog] = []
 
-        if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+    @property
+    def client(self) -> Optional[Client]:
+        global supabase
+        if supabase is None and settings.SUPABASE_URL and settings.SUPABASE_KEY and "your-project" not in settings.SUPABASE_URL:
             try:
-                from supabase import create_client
-                self.supabase_client = create_client(
-                    settings.SUPABASE_URL,
-                    settings.SUPABASE_KEY
-                )
-                logger.info("Connected to Supabase cloud database.")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Supabase client: {e}. Falling back to in-memory store.")
+                supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+            except Exception:
+                pass
+        return supabase
 
     async def get_product(self, product_id: str) -> Optional[Product]:
-        if self.supabase_client:
+        """Fetch single product by UUID from Supabase."""
+        if self.client:
             try:
-                response = self.supabase_client.table("products").select("*").eq("id", product_id).execute()
-                if response.data and len(response.data) > 0:
-                    row = response.data[0]
-                    return Product(**row)
+                res = self.client.table("products").select("*").eq("id", product_id).execute()
+                if res.data and len(res.data) > 0:
+                    return Product(**res.data[0])
             except Exception as e:
                 logger.error(f"Supabase error fetching product {product_id}: {e}")
         return self._mock_products.get(product_id)
 
     async def list_products(self) -> List[Product]:
-        if self.supabase_client:
+        """List all products in the catalog."""
+        if self.client:
             try:
-                response = self.supabase_client.table("products").select("*").execute()
-                if response.data:
-                    return [Product(**row) for row in response.data]
+                res = self.client.table("products").select("*").execute()
+                if res.data and len(res.data) > 0:
+                    return [Product(**row) for row in res.data]
             except Exception as e:
                 logger.error(f"Supabase error listing products: {e}")
         return list(self._mock_products.values())
 
     async def search_products(self, query: str, limit: int = 5) -> List[Product]:
-        """Performs semantic/text search on catalog."""
+        """
+        Performs semantic matching on products catalog.
+        Queries Supabase and performs tokenized score ranking.
+        """
         products = await self.list_products()
         query_lower = query.lower()
         scored_products = []
@@ -107,32 +128,32 @@ class DatabaseRepository:
             score += len(query_tokens.intersection(desc_tokens)) * 0.1
             scored_products.append((score, p))
 
-        # Sort by relevance
+        # Sort by score relevance
         scored_products.sort(key=lambda x: x[0], reverse=True)
-        # If no score match, return top products
         results = [p for score, p in scored_products if score > 0]
         if not results:
             results = [p for _, p in scored_products]
         return results[:limit]
 
     async def create_order(self, order: Order) -> Order:
+        """Insert a newly negotiated order into Supabase."""
         if not order.created_at:
             order.created_at = datetime.now(timezone.utc)
         if not order.updated_at:
             order.updated_at = order.created_at
 
-        if self.supabase_client:
+        if self.client:
             try:
                 data = {
-                    "id": order.id,
+                    "id": str(order.id),
                     "razorpay_order_id": order.razorpay_order_id,
                     "agent_id": order.agent_id,
-                    "product_id": order.product_id,
-                    "negotiated_price": order.negotiated_price,
+                    "product_id": str(order.product_id),
+                    "negotiated_price": float(order.negotiated_price),
                     "currency": order.currency,
-                    "status": order.status.value if hasattr(order.status, 'value') else order.status,
+                    "status": order.status.value if hasattr(order.status, "value") else str(order.status),
                 }
-                self.supabase_client.table("orders").insert(data).execute()
+                self.client.table("orders").insert(data).execute()
             except Exception as e:
                 logger.error(f"Supabase error creating order {order.id}: {e}")
 
@@ -140,16 +161,18 @@ class DatabaseRepository:
         return order
 
     async def get_order_by_razorpay_id(self, razorpay_order_id: str) -> Optional[Order]:
-        if self.supabase_client:
+        """Fetch order by Razorpay Order ID from Supabase."""
+        if self.client:
             try:
-                response = self.supabase_client.table("orders").select("*").eq("razorpay_order_id", razorpay_order_id).execute()
-                if response.data and len(response.data) > 0:
-                    return Order(**response.data[0])
+                res = self.client.table("orders").select("*").eq("razorpay_order_id", razorpay_order_id).execute()
+                if res.data and len(res.data) > 0:
+                    return Order(**res.data[0])
             except Exception as e:
                 logger.error(f"Supabase error fetching order {razorpay_order_id}: {e}")
         return self._mock_orders.get(razorpay_order_id)
 
     async def update_order_status(self, razorpay_order_id: str, status: OrderStatus) -> Optional[Order]:
+        """Update order status in Supabase."""
         order = await self.get_order_by_razorpay_id(razorpay_order_id)
         if not order:
             return None
@@ -157,11 +180,12 @@ class DatabaseRepository:
         order.status = status
         order.updated_at = datetime.now(timezone.utc)
 
-        if self.supabase_client:
+        if self.client:
             try:
-                self.supabase_client.table("orders").update({
-                    "status": status.value if hasattr(status, 'value') else status,
-                    "updated_at": order.updated_at.isoformat()
+                status_val = status.value if hasattr(status, "value") else str(status)
+                self.client.table("orders").update({
+                    "status": status_val,
+                    "updated_at": order.updated_at.isoformat(),
                 }).eq("razorpay_order_id", razorpay_order_id).execute()
             except Exception as e:
                 logger.error(f"Supabase error updating order {razorpay_order_id}: {e}")
@@ -170,19 +194,20 @@ class DatabaseRepository:
         return order
 
     async def insert_audit_log(self, log: AuditLog) -> AuditLog:
+        """Insert immutable audit log into Supabase."""
         if not log.created_at:
             log.created_at = datetime.now(timezone.utc)
 
-        if self.supabase_client:
+        if self.client:
             try:
                 data = {
-                    "id": log.id,
-                    "order_id": log.order_id,
+                    "id": str(log.id),
+                    "order_id": str(log.order_id) if log.order_id else None,
                     "agent_id": log.agent_id,
                     "event_type": log.event_type,
                     "payload": log.payload,
                 }
-                self.supabase_client.table("audit_logs").insert(data).execute()
+                self.client.table("audit_logs").insert(data).execute()
             except Exception as e:
                 logger.error(f"Supabase error logging audit event: {e}")
 
@@ -190,14 +215,16 @@ class DatabaseRepository:
         return log
 
     async def get_audit_logs(self, limit: int = 50) -> List[AuditLog]:
-        if self.supabase_client:
+        """Retrieve recent immutable audit logs from Supabase."""
+        if self.client:
             try:
-                response = self.supabase_client.table("audit_logs").select("*").order("created_at", desc=True).limit(limit).execute()
-                if response.data:
-                    return [AuditLog(**row) for row in response.data]
+                res = self.client.table("audit_logs").select("*").order("created_at", desc=True).limit(limit).execute()
+                if res.data:
+                    return [AuditLog(**row) for row in res.data]
             except Exception as e:
                 logger.error(f"Supabase error fetching audit logs: {e}")
         return self._mock_audit_logs[:limit]
 
 
+# Global database repository singleton
 db = DatabaseRepository()

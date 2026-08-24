@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = "rzp_test_default_mock_secret"
     RAZORPAY_WEBHOOK_SECRET: str = "rzp_webhook_secret_2026"
 
-    # OpenAI Settings (optional for semantic embeddings)
-    OPENAI_API_KEY: Optional[str] = None
+    # Gemini / Google Gen AI Settings
+    GEMINI_API_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -37,3 +37,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_settings() -> Settings:
+    """Returns the application settings singleton."""
+    return settings
