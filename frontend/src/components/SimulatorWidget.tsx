@@ -33,7 +33,7 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
       setLastResult({
         status: 'success',
         title: 'Semantic Discovery Successful',
-        description: `Agent queried the catalog and matched ${results.length} product(s) via pgvector. Price floors remained confidential.`,
+        description: `Agent queried catalog and matched ${results.length} product(s) via pgvector. Price floors remained confidential.`,
         details: {
           matched_products: results.map((r) => `${r.name} (MRP: ₹${r.mrp})`),
         },
@@ -71,7 +71,7 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
             razorpay_order_id: orderId,
             negotiated_price: '₹3,800.00',
             mrp: '₹4,500.00',
-            discount: '₹700.00',
+            discount: '₹700.00 (15.5%)',
           },
         });
       } else {
@@ -180,33 +180,33 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-      <div className="relative w-full max-w-xl rounded-2xl bg-[#121216] border border-zinc-800 p-6 shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl rounded-2xl bg-[#121216] border border-zinc-800/90 p-6 shadow-2xl space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
           <div>
             <h3 className="text-base font-heading font-bold text-zinc-100">
               Agent Test Console
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-400 mt-0.5">
               Simulate AI buyer agent requests and test gateway defense rules.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
+            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* 4 Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Action 1: Search */}
           <button
             onClick={handleDiscovery}
             disabled={running !== null}
-            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/70 text-left transition cursor-pointer disabled:opacity-50 space-y-1"
+            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/80 text-left transition cursor-pointer disabled:opacity-50 space-y-1 hover:border-cyan-500/30"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
@@ -224,7 +224,7 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
           <button
             onClick={handleValidNegotiation}
             disabled={running !== null}
-            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/70 text-left transition cursor-pointer disabled:opacity-50 space-y-1"
+            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/80 text-left transition cursor-pointer disabled:opacity-50 space-y-1 hover:border-emerald-500/30"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
@@ -242,7 +242,7 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
           <button
             onClick={handleSubFloorAttack}
             disabled={running !== null}
-            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/70 text-left transition cursor-pointer disabled:opacity-50 space-y-1"
+            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/80 text-left transition cursor-pointer disabled:opacity-50 space-y-1 hover:border-rose-500/30"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-rose-400">
@@ -260,7 +260,7 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
           <button
             onClick={handleSettleOrder}
             disabled={running !== null}
-            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/70 text-left transition cursor-pointer disabled:opacity-50 space-y-1"
+            className="p-3.5 rounded-xl border border-zinc-800 bg-[#16161b] hover:bg-zinc-800/80 text-left transition cursor-pointer disabled:opacity-50 space-y-1 hover:border-indigo-500/30"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400">
@@ -276,16 +276,16 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
         </div>
 
         {/* Output Result Card */}
-        <div className="pt-2">
+        <div className="pt-1">
           {lastResult ? (
             <div
-              className={`p-4 rounded-xl border text-xs space-y-2 ${
+              className={`p-4 rounded-xl border text-xs space-y-2.5 shadow-xs ${
                 lastResult.status === 'success'
-                  ? 'bg-emerald-950/20 border-emerald-500/30'
+                  ? 'bg-emerald-950/25 border-emerald-500/35'
                   : lastResult.status === 'blocked'
-                  ? 'bg-rose-950/20 border-rose-500/30'
+                  ? 'bg-rose-950/25 border-rose-500/35'
                   : lastResult.status === 'info'
-                  ? 'bg-amber-950/20 border-amber-500/30'
+                  ? 'bg-amber-950/25 border-amber-500/35'
                   : 'bg-zinc-900/80 border-zinc-800'
               }`}
             >
@@ -308,20 +308,20 @@ export const SimulatorWidget: React.FC<SimulatorWidgetProps> = ({
                   {lastResult.title}
                 </span>
               </div>
-              <p className="text-zinc-300 leading-relaxed">{lastResult.description}</p>
+              <p className="text-zinc-300 leading-relaxed text-[11.5px]">{lastResult.description}</p>
               {lastResult.details && (
-                <div className="mt-2 pt-2 border-t border-zinc-800/80 grid grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400">
+                <div className="mt-2 pt-2 border-t border-zinc-800/80 grid grid-cols-2 gap-2 text-[11px] font-mono">
                   {Object.entries(lastResult.details).map(([key, val]) => (
-                    <div key={key}>
-                      <span className="text-zinc-500 capitalize">{key.replace(/_/g, ' ')}:</span>{' '}
-                      <span className="text-zinc-200">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
+                    <div key={key} className="bg-black/20 p-1.5 rounded border border-white/5">
+                      <span className="text-zinc-400 capitalize">{key.replace(/_/g, ' ')}:</span>{' '}
+                      <span className="text-zinc-100 font-semibold">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/60 text-xs text-zinc-400 text-center py-6">
+            <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800/60 text-xs text-zinc-400 text-center py-6">
               Click any of the 4 test actions above to simulate an autonomous agent transaction.
             </div>
           )}

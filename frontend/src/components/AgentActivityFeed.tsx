@@ -19,6 +19,10 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
     ].includes(l.event_type)
   );
 
+  const attacksCount = agentLogs.filter((l) => l.event_type === 'PRICE_ATTACK_BLOCKED' || l.event_type === 'BUDGET_EXCEEDED').length;
+  const searchCount = agentLogs.filter((l) => l.event_type === 'DISCOVERY_QUERY').length;
+  const mandateCount = agentLogs.filter((l) => l.event_type === 'MANDATE_VERIFIED' || l.event_type === 'MANDATE_REJECTED').length;
+
   const filteredLogs = agentLogs.filter((l) => {
     if (filter === 'ATTACKS') return l.event_type === 'PRICE_ATTACK_BLOCKED' || l.event_type === 'BUDGET_EXCEEDED';
     if (filter === 'SEARCH') return l.event_type === 'DISCOVERY_QUERY';
@@ -27,62 +31,73 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
   });
 
   return (
-    <div className="flex flex-col h-[580px] rounded-xl border border-zinc-800/90 bg-[#121216] overflow-hidden">
+    <div className="flex flex-col h-[580px] rounded-xl border border-zinc-800/80 bg-[#111115] overflow-hidden shadow-xs">
       {/* Feed Header */}
-      <div className="px-5 py-3.5 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#16161b]">
-        <div className="flex items-center gap-2">
-          <Radio className="h-4 w-4 text-indigo-400" />
-          <h3 className="text-sm font-semibold text-zinc-100">
-            Agent Traffic & Policy Firewall
-          </h3>
+      <div className="px-5 py-3.5 border-b border-zinc-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#15151a]">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <Radio className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              Agent Traffic & Policy Firewall
+            </h3>
+            <p className="text-[11px] text-zinc-400">Live intent queries & blocked exploits</p>
+          </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 bg-zinc-900/90 p-0.5 rounded-lg border border-zinc-800 text-xs">
+        <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-lg border border-zinc-800 text-xs">
           <button
             onClick={() => setFilter('ALL')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
-              filter === 'ALL' ? 'bg-zinc-800 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+              filter === 'ALL' ? 'bg-zinc-800 text-white font-medium shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            All
+            <span>All</span>
+            <span className="text-[10px] text-zinc-500 font-mono">({agentLogs.length})</span>
           </button>
           <button
             onClick={() => setFilter('ATTACKS')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
               filter === 'ATTACKS' ? 'bg-rose-500/20 text-rose-300 font-medium' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <span>Attacks</span>
-            {agentLogs.filter((l) => l.event_type === 'PRICE_ATTACK_BLOCKED').length > 0 && (
-              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {attacksCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/30 text-rose-300 font-semibold font-mono">
+                {attacksCount}
+              </span>
             )}
           </button>
           <button
             onClick={() => setFilter('SEARCH')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
               filter === 'SEARCH' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Searches
+            <span>Searches</span>
+            <span className="text-[10px] text-zinc-500 font-mono">({searchCount})</span>
           </button>
           <button
             onClick={() => setFilter('MANDATES')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
               filter === 'MANDATES' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Mandates
+            <span>Mandates</span>
+            <span className="text-[10px] text-zinc-500 font-mono">({mandateCount})</span>
           </button>
         </div>
       </div>
 
       {/* Feed List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
         {filteredLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-500 text-xs space-y-2 py-8">
+          <div className="flex flex-col items-center justify-center h-full text-zinc-500 text-xs space-y-2 py-12">
             <Info className="h-6 w-6 text-zinc-600" />
-            <p>No activity recorded for this filter yet.</p>
+            <p>No activity logged for this category yet.</p>
+            <p className="text-[11px] text-zinc-600">Run the Agent Simulator to trigger live transactions.</p>
           </div>
         ) : (
           filteredLogs.map((log) => {
@@ -94,7 +109,7 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
               return (
                 <div
                   key={log.id}
-                  className="p-3.5 rounded-lg bg-rose-950/20 border border-rose-500/30 space-y-2.5 transition"
+                  className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-500/30 space-y-2 transition shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -108,27 +123,27 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
                     <span className="text-[11px] text-zinc-500 font-mono">{time}</span>
                   </div>
 
-                  <div className="text-xs text-zinc-300 space-y-1">
+                  <div className="text-xs text-zinc-300 space-y-1.5">
                     <div className="font-medium text-zinc-200">
-                      Product: {log.payload?.product_name || 'Protected Product'}
+                      Product: {log.payload?.product_name || 'Protected Catalog Item'}
                     </div>
-                    <div className="flex items-center gap-4 text-xs pt-1">
+                    <div className="flex items-center gap-4 text-xs bg-black/20 p-2 rounded-lg border border-rose-500/15">
                       <div>
-                        <span className="text-zinc-500">Attempted:</span>{' '}
+                        <span className="text-zinc-500 text-[11px]">Offered:</span>{' '}
                         <span className="text-rose-400 font-semibold line-through">
                           ₹{log.payload?.proposed_price}
                         </span>
                       </div>
                       <div>
-                        <span className="text-zinc-500">Protected Floor:</span>{' '}
+                        <span className="text-zinc-500 text-[11px]">Protected Floor:</span>{' '}
                         <span className="text-emerald-400 font-semibold">
                           ₹{log.payload?.price_floor}
                         </span>
                       </div>
+                      <div className="ml-auto text-[11px] text-rose-300 font-mono">
+                        -₹{log.payload?.delta_below_floor} exploit halted
+                      </div>
                     </div>
-                    <p className="text-[11px] text-zinc-400 pt-1">
-                      Aegis Firewall intercepted exploit (-₹{log.payload?.delta_below_floor} below minimum margin).
-                    </p>
                   </div>
                 </div>
               );
@@ -138,13 +153,13 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
               return (
                 <div
                   key={log.id}
-                  className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700/80 transition space-y-1.5"
+                  className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700/80 transition space-y-1.5 shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Search className="h-3.5 w-3.5 text-cyan-400" />
                       <span className="text-xs font-medium text-zinc-300">
-                        Semantic Product Search
+                        Semantic Catalog Search
                       </span>
                     </div>
                     <span className="text-[11px] text-zinc-500 font-mono">{time}</span>
@@ -153,8 +168,8 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
                     "{log.payload?.query}"
                   </p>
                   <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-                    <span>Matched {log.payload?.results_count || 0} catalog item(s)</span>
-                    <span className="text-zinc-500 font-mono text-[10px]">pgvector cosine</span>
+                    <span>Matched {log.payload?.results_count || 0} product(s)</span>
+                    <span className="text-zinc-500 font-mono text-[10px] bg-zinc-800/60 px-1.5 py-0.5 rounded">pgvector cosine</span>
                   </div>
                 </div>
               );
@@ -164,7 +179,7 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
               return (
                 <div
                   key={log.id}
-                  className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/80 space-y-1.5"
+                  className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 space-y-1.5 shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -180,7 +195,7 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
                       Agent: {log.agent_id}
                     </span>
                     <span className="text-indigo-300 font-medium">
-                      Budget: ₹{log.payload?.max_budget?.toLocaleString('en-IN')}
+                      Max Budget: ₹{log.payload?.max_budget?.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
@@ -191,13 +206,13 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({ logs }) =>
               return (
                 <div
                   key={log.id}
-                  className="p-3 rounded-lg bg-amber-950/20 border border-amber-500/30 space-y-1.5"
+                  className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-1.5 shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
                       <span className="text-xs font-semibold text-amber-300">
-                        Agent Budget Limit Exceeded
+                        Mandate Budget Exceeded
                       </span>
                     </div>
                     <span className="text-[11px] text-zinc-500 font-mono">{time}</span>

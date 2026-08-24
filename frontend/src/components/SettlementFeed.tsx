@@ -14,13 +14,17 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
     [
       'ORDER_CREATED',
       'PAYMENT_CONFIRMED',
+      'SETTLEMENT_CONFIRMED',
       'PAYMENT_FAILED',
       'SIGNATURE_VERIFICATION_FAILED',
     ].includes(l.event_type)
   );
 
+  const paidCount = settlementLogs.filter((l) => l.event_type === 'PAYMENT_CONFIRMED' || l.event_type === 'SETTLEMENT_CONFIRMED').length;
+  const pendingCount = settlementLogs.filter((l) => l.event_type === 'ORDER_CREATED').length;
+
   const filteredLogs = settlementLogs.filter((l) => {
-    if (filter === 'PAID') return l.event_type === 'PAYMENT_CONFIRMED';
+    if (filter === 'PAID') return l.event_type === 'PAYMENT_CONFIRMED' || l.event_type === 'SETTLEMENT_CONFIRMED';
     if (filter === 'PENDING') return l.event_type === 'ORDER_CREATED';
     return true;
   });
@@ -32,51 +36,64 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
   };
 
   return (
-    <div className="flex flex-col h-[580px] rounded-xl border border-zinc-800/90 bg-[#121216] overflow-hidden">
+    <div className="flex flex-col h-[580px] rounded-xl border border-zinc-800/80 bg-[#111115] overflow-hidden shadow-xs">
       {/* Feed Header */}
-      <div className="px-5 py-3.5 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#16161b]">
-        <div className="flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-emerald-400" />
-          <h3 className="text-sm font-semibold text-zinc-100">
-            Razorpay Orders & Settlement Stream
-          </h3>
+      <div className="px-5 py-3.5 border-b border-zinc-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#15151a]">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CreditCard className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              Razorpay Orders & Settlements
+            </h3>
+            <p className="text-[11px] text-zinc-400">Deterministic HMAC payment verification stream</p>
+          </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 bg-zinc-900/90 p-0.5 rounded-lg border border-zinc-800 text-xs">
+        <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-lg border border-zinc-800 text-xs">
           <button
             onClick={() => setFilter('ALL')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
-              filter === 'ALL' ? 'bg-zinc-800 text-white font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+              filter === 'ALL' ? 'bg-zinc-800 text-white font-medium shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            All
+            <span>All</span>
+            <span className="text-[10px] text-zinc-500 font-mono">({settlementLogs.length})</span>
           </button>
           <button
             onClick={() => setFilter('PAID')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
               filter === 'PAID' ? 'bg-emerald-500/20 text-emerald-300 font-medium' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Paid
+            <span>Paid</span>
+            {paidCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/30 text-emerald-300 font-semibold font-mono">
+                {paidCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setFilter('PENDING')}
-            className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
               filter === 'PENDING' ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Pending
+            <span>Pending</span>
+            <span className="text-[10px] text-zinc-500 font-mono">({pendingCount})</span>
           </button>
         </div>
       </div>
 
       {/* Transactions List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
         {filteredLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-500 text-xs space-y-2 py-8">
+          <div className="flex flex-col items-center justify-center h-full text-zinc-500 text-xs space-y-2 py-12">
             <Info className="h-6 w-6 text-zinc-600" />
-            <p>No transactions recorded yet.</p>
+            <p>No orders recorded in this category.</p>
+            <p className="text-[11px] text-zinc-600">Simulate a negotiation to create an active Razorpay order.</p>
           </div>
         ) : (
           filteredLogs.map((log) => {
@@ -84,12 +101,14 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
               ? new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
               : 'Just now';
 
-            if (log.event_type === 'PAYMENT_CONFIRMED') {
+            if (log.event_type === 'PAYMENT_CONFIRMED' || log.event_type === 'SETTLEMENT_CONFIRMED') {
               const orderId = log.payload?.razorpay_order_id || 'N/A';
+              const amountPaid = log.payload?.amount_paid || log.payload?.negotiated_price;
+
               return (
                 <div
                   key={log.id}
-                  className="p-3.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 space-y-2 transition"
+                  className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2.5 transition shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -101,15 +120,19 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
                         Webhook Received
                       </span>
                     </div>
-                    <span className="text-[11px] text-zinc-500 font-mono">{time}</span>
+                    {amountPaid && (
+                      <span className="text-sm font-semibold text-emerald-400 font-mono">
+                        ₹{Number(amountPaid).toLocaleString('en-IN')}
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-xs text-zinc-300 space-y-1.5 pt-0.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-zinc-400">Order ID:</span>
+                      <span className="text-zinc-400 text-[11px]">Razorpay Order ID:</span>
                       <button
                         onClick={() => handleCopy(orderId)}
-                        className="flex items-center gap-1 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 text-zinc-300 transition cursor-pointer"
+                        className="flex items-center gap-1.5 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-800 hover:border-zinc-700 text-zinc-300 transition cursor-pointer"
                         title="Click to copy ID"
                       >
                         <span>{orderId}</span>
@@ -121,9 +144,12 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/90 pt-1 border-t border-emerald-900/40">
-                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                      <span>HMAC-SHA256 signature verified</span>
+                    <div className="flex items-center justify-between text-[11px] text-emerald-400/90 pt-1.5 border-t border-emerald-900/30">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                        <span>HMAC-SHA256 signature verified</span>
+                      </div>
+                      <span className="text-zinc-500 font-mono">{time}</span>
                     </div>
                   </div>
                 </div>
@@ -135,7 +161,7 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
               return (
                 <div
                   key={log.id}
-                  className="p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700/80 transition space-y-2"
+                  className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700/80 transition space-y-2 shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -147,7 +173,7 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
                         {log.payload?.product_name}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-emerald-400">
+                    <span className="text-sm font-semibold text-white font-heading">
                       ₹{log.payload?.negotiated_price?.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -156,6 +182,7 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
                     <button
                       onClick={() => handleCopy(orderId)}
                       className="flex items-center gap-1 font-mono text-[11px] text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+                      title="Click to copy ID"
                     >
                       <span>{orderId}</span>
                       {copiedId === orderId ? (
@@ -167,7 +194,7 @@ export const SettlementFeed: React.FC<SettlementFeedProps> = ({ logs }) => {
                     <div className="flex items-center gap-3 text-[11px]">
                       <span>MRP: ₹{log.payload?.mrp}</span>
                       {log.payload?.discount_given > 0 && (
-                        <span className="text-indigo-400">
+                        <span className="text-indigo-400 font-medium">
                           -₹{log.payload?.discount_given}
                         </span>
                       )}
