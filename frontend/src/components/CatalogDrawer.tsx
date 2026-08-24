@@ -8,13 +8,6 @@ interface CatalogDrawerProps {
   onClose: () => void;
 }
 
-const MERCHANT_FLOOR_DATA: Record<string, number> = {
-  'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d': 3800.0,
-  'b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e': 9500.0,
-  'c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f': 6200.0,
-  'd4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a': 2200.0,
-};
-
 export const CatalogDrawer: React.FC<CatalogDrawerProps> = ({ isOpen, onClose }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,7 +74,6 @@ export const CatalogDrawer: React.FC<CatalogDrawerProps> = ({ isOpen, onClose })
             </div>
           ) : (
             filteredProducts.map((p) => {
-              // Directly use the confidential floor coming securely from the database/API model
               const floor = p.price_floor || p.mrp * 0.85;
               const maxDiscount = p.mrp - floor;
               const discountPct = Math.round((maxDiscount / p.mrp) * 100);
