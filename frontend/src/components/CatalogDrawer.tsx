@@ -81,7 +81,8 @@ export const CatalogDrawer: React.FC<CatalogDrawerProps> = ({ isOpen, onClose })
             </div>
           ) : (
             filteredProducts.map((p) => {
-              const floor = MERCHANT_FLOOR_DATA[p.id] || p.mrp * 0.85;
+              // Directly use the confidential floor coming securely from the database/API model
+              const floor = p.price_floor || p.mrp * 0.85;
               const maxDiscount = p.mrp - floor;
               const discountPct = Math.round((maxDiscount / p.mrp) * 100);
 
