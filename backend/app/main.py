@@ -62,11 +62,12 @@ async def health_check():
 
 
 # Register Gateway Routers
-app.include_router(discovery_router)
-app.include_router(negotiate_router)
-app.include_router(webhooks_router)
-app.include_router(audit_router)
-app.include_router(test_helpers_router)
+# Register Gateway Routers
+app.include_router(discovery_router, prefix="/api/v1", tags=["Catalog"])
+app.include_router(negotiate_router, prefix="/api/v1", tags=["Agent"])
+app.include_router(webhooks_router, prefix="/api/v1", tags=["Webhooks"])
+app.include_router(audit_router, prefix="/api/v1", tags=["Audit"])
+app.include_router(test_helpers_router, prefix="/api/v1", tags=["Test Helpers"])
 
 
 if __name__ == "__main__":
