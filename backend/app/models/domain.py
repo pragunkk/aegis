@@ -1,9 +1,10 @@
 """Domain models representing database entities."""
 
+import json
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import uuid
 
 
@@ -18,11 +19,22 @@ class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = None
+    category: Optional[str] = None
     mrp: float
     price_floor: float
     stock: int = 0
     embedding: Optional[List[float]] = None
     created_at: Optional[datetime] = None
+
+    @field_validator('embedding', mode='before')
+    @classmethod
+    def parse_embedding(cls, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return None
+        return value
 
 
 class Order(BaseModel):
